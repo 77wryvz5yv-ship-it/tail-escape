@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>BLOCK ESCAPE</title>
+<style>
+*{box-sizing:border-box;-webkit-user-select:none;user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b18;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;touch-action:none}
+body{display:flex;justify-content:center;background:radial-gradient(circle at 50% 5%,#26306b 0,#0d1230 38%,#060812 100%)}
+#app{width:min(100vw,520px);height:100%;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom);display:flex;flex-direction:column}
+header{height:72px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:24px;font-weight:1000;letter-spacing:1.5px}.logo span{color:#71e8ff;text-shadow:0 0 15px #38dfff}
+.stats{text-align:right;font-weight:800;font-size:14px;color:#dbeaff}
+#arena{position:relative;flex:1;min-height:300px;overflow:hidden;border:1px solid #738cff88;border-radius:22px;background:linear-gradient(180deg,#151c43,#0a1028);box-shadow:0 18px 50px #0008,inset 0 0 35px #627cff15}
+#arena:before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:28px 28px}
+.block{position:absolute;border-radius:8px;box-shadow:inset 0 2px 3px #fff7,0 5px 12px #0007;transition:left .07s linear,bottom .07s linear}
+.block:after{content:"";position:absolute;inset:4px;border:1px solid #fff4;border-radius:5px}
+#player{position:absolute;z-index:20;border-radius:10px;background:linear-gradient(145deg,#72f5ff,#3978ff);box-shadow:0 0 22px #43cfff, inset 0 2px 4px #fff9}
+#player:before,#player:after{content:"";position:absolute;top:29%;width:15%;height:15%;border-radius:50%;background:#08122c}
+#player:before{left:25%}#player:after{right:25%}
+#player .mouth{position:absolute;left:34%;top:59%;width:32%;height:8%;border-bottom:2px solid #07132f;border-radius:50%}
+#hudmsg{position:absolute;z-index:30;left:12px;right:12px;top:12px;text-align:center;font-weight:900;color:#fff;text-shadow:0 2px 8px #000}
+#overlay{position:absolute;z-index:50;inset:0;background:linear-gradient(#080b18bb,#080b18e8);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:22px}
+.card{width:100%;max-width:390px;text-align:center;background:#151b3bea;border:1px solid #8497ff66;border-radius:24px;padding:25px 18px;box-shadow:0 20px 60px #0008}
+.card h1{font-size:33px;margin:0 0 5px;letter-spacing:1px}.sub{color:#a9bbdd;margin-bottom:19px;font-size:14px}
+.diffs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.diff{padding:13px 4px;border:1px solid #ffffff24;border-radius:14px;background:#ffffff08;font-weight:900;color:#dce8ff}.diff small{display:block;margin-top:4px;font-weight:600;color:#8ea4c7}.diff.sel{border-color:#5ee8ff;background:#183e5d;box-shadow:0 0 16px #39dfff44}
+.start{margin-top:17px;width:100%;border:0;border-radius:15px;padding:14px;background:linear-gradient(90deg,#52d9ff,#7078ff);color:white;font-size:18px;font-weight:1000;box-shadow:0 8px 25px #527aff55}
+.help{font-size:12px;color:#90a5c6;margin-top:13px;line-height:1.5}
+#controls{height:102px;display:flex;gap:10px;align-items:center;justify-content:center}
+.ctrl{width:42%;height:60px;border:1px solid #758bff55;border-radius:18px;background:linear-gradient(#1a224b,#101632);color:#bcefff;font-size:29px;font-weight:1000;box-shadow:0 7px 18px #0006}
+.ctrl:active{transform:translateY(2px);background:#263366}
+</style></head>
+<body><div id="app">
+<header><div class="logo">BLOCK <span>ESCAPE</span></div><div class="stats"><div id="score">점수 0</div><div id="best">최고 0</div><div id="life">❤❤❤</div></div></header>
+<div id="arena"><div id="hudmsg"></div><div id="player"><div class="mouth"></div></div>
+<div id="overlay"><div class="card"><h1>BLOCK ESCAPE</h1><div class="sub">쌓이는 블록 사이에서 살아남으세요</div>
+<div class="diffs"><div class="diff sel" data-d="easy">쉬움<small>❤ 3 · 천천히</small></div><div class="diff" data-d="normal">보통<small>❤ 2 · 보통</small></div><div class="diff" data-d="hard">어려움<small>❤ 1 · 빠르게</small></div></div>
+<button class="start" id="start">게임 시작</button><div class="help">◀ ▶ 버튼 또는 화면 좌우를 터치해 이동<br>블록을 피하고, 작은 블록은 옆에서 밀어 길을 만드세요.</div></div></div></div>
+<div id="controls"><button class="ctrl" id="left">◀</button><button class="ctrl" id="right">▶</button></div>
+</div>
+<script>
+(function(){
+var A=document.getElementById('arena'),P=document.getElementById('player'),O=document.getElementById('overlay'),S=document.getElementById('score'),B=document.getElementById('best'),L=document.getElementById('life'),M=document.getElementById('hudmsg');
+var diff='easy',running=false,score=0,best=0,lives=3,blocks=[],fallTimer,clockTimer,spawnMs=1000,fallSpeed=3,cell=34,pw=34,ph=34,px=0,py=8,moveStep=34,lastHit=0;
+try{best=+localStorage.blockEscapeBest||0}catch(e){} B.textContent='최고 '+best;
+function dims(){var w=A.clientWidth,h=A.clientHeight;cell=Math.max(28,Math.min(38,Math.floor(w/10)));pw=ph=cell-4;P.style.width=pw+'px';P.style.height=ph+'px';px=Math.min(px||Math.floor((w-pw)/2),w-pw);P.style.left=px+'px';P.style.bottom=py+'px'}
+addEventListener('resize',dims);
+document.querySelectorAll('.diff').forEach(function(e){e.onclick=function(){document.querySelectorAll('.diff').forEach(x=>x.classList.remove('sel'));e.classList.add('sel');diff=e.dataset.d}});
+function setup(){if(diff==='easy'){lives=3;spawnMs=1150;fallSpeed=2.4}else if(diff==='normal'){lives=2;spawnMs=900;fallSpeed=3.3}else{lives=1;spawnMs=700;fallSpeed=4.2}score=0;blocks.forEach(b=>b.el.remove());blocks=[];px=(A.clientWidth-pw)/2;P.style.left=px+'px';P.style.bottom=py+'px';update();M.textContent=''}
+function update(){S.textContent='점수 '+score;B.textContent='최고 '+best;L.textContent='❤'.repeat(lives)}
+function color(){var a=['#ff5f7a','#ffd05b','#62e58b','#a879ff','#ff8f4d','#5dd9ff'];return a[Math.floor(Math.random()*a.length)]}
+function spawn(){if(!running)return;var cols=Math.max(5,Math.floor(A.clientWidth/cell)),units=Math.random()<.72?1:2,w=units*cell-5,x=Math.floor(Math.random()*cols)*cell;x=Math.min(x,A.clientWidth-w-2);var e=document.createElement('div');e.className='block';e.style.width=w+'px';e.style.height=(cell-5)+'px';e.style.left=x+'px';e.style.top=(-cell)+'px';e.style.background='linear-gradient(145deg,#ffffff55,'+color()+')';A.appendChild(e);blocks.push({el:e,x:x,y:-cell,w:w,h:cell-5,vy:fallSpeed,land:false});setTimeout(spawn,spawnMs*Math.max(.62,1-score/180))}
+function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function hit(){var now=Date.now();if(now-lastHit<900)return;lastHit=now;lives--;update();P.style.opacity='.25';setTimeout(()=>P.style.opacity='1',450);if(lives<=0)gameOver();else{M.textContent='조심! ❤ -1';setTimeout(()=>M.textContent='',700)}}
+function loop(){if(!running)return;var H=A.clientHeight, player={x:px,y:H-py-ph,w:pw,h:ph};for(var i=0;i<blocks.length;i++){var b=blocks[i];if(!b.land){b.y+=b.vy;var floor=H-5;for(var j=0;j<blocks.length;j++){var o=blocks[j];if(o!==b&&o.land&&b.x<o.x+o.w&&b.x+b.w>o.x&&b.y+b.h<=o.y+12)floor=Math.min(floor,o.y)}if(b.y+b.h>=floor){b.y=floor-b.h;b.land=true;score++;if(score>best){best=score;try{localStorage.blockEscapeBest=best}catch(e){}}update()}b.el.style.top=b.y+'px'}if(overlap(player,b)){if(!b.land||b.w>cell)hit();else{var push=player.x+player.w/2<b.x+b.w/2?cell:-cell,nx=b.x+push;if(nx>=0&&nx+b.w<=A.clientWidth){b.x=nx;b.el.style.left=nx+'px'}else hit()}}if(b.land&&b.y<cell*1.3){gameOver();return}}requestAnimationFrame(loop)}
+function move(d){if(!running)return;var nx=Math.max(0,Math.min(A.clientWidth-pw,px+d*moveStep)),H=A.clientHeight,pr={x:nx,y:H-py-ph,w:pw,h:ph};for(var b of blocks){if(b.land&&overlap(pr,b)){if(b.w<=cell){var bx=b.x+d*cell;if(bx>=0&&bx+b.w<=A.clientWidth){b.x=bx;b.el.style.left=bx+'px'}else return}else return}}px=nx;P.style.left=px+'px'}
+function start(){dims();setup();running=true;O.style.display='none';spawn();requestAnimationFrame(loop)}
+function gameOver(){if(!running)return;running=false;O.style.display='flex';O.innerHTML='<div class="card"><h1>GAME OVER</h1><div class="sub">점수 '+score+' · 최고 '+best+'</div><button class="start" id="again">다시 도전</button><div class="help">블록이 천장까지 쌓이거나 생명이 0이 되면 종료됩니다.</div></div>';document.getElementById('again').onclick=function(){location.reload()}}
+document.getElementById('start').onclick=start;
+function bind(id,d){var e=document.getElementById(id);function f(ev){ev.preventDefault();move(d)}e.addEventListener('touchstart',f,{passive:false});e.addEventListener('mousedown',f)}
+bind('left',-1);bind('right',1);
+A.addEventListener('touchstart',function(e){if(!running)return;var r=A.getBoundingClientRect();move(e.touches[0].clientX-r.left<r.width/2?-1:1)},{passive:true});
+dims();
+})();
+</script></body></html>
